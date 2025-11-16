@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Friendship Gift Generator</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#7dd3fc;
+    --glass: rgba(255,255,255,0.04);
+    --soft: rgba(255,255,255,0.06);
+  }
+  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{
+    background: radial-gradient(ellipse at 10% 10%, rgba(125,211,252,.06), transparent 10%),
+                radial-gradient(ellipse at 90% 90%, rgba(99,102,241,.04), transparent 10%),
+                var(--bg);
+    color: #e6eef8;
+    display:flex;align-items:center;justify-content:center;padding:28px;
+  }
+  .wrap{
+    width:100%;max-width:980px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:18px;padding:28px;box-shadow:0 10px 30px rgba(2,6,23,.6);backdrop-filter: blur(6px);
+    position:relative;overflow:hidden;
+  }
+  header{display:flex;gap:16px;align-items:center;}
+  .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#7dd3fc,#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:700;color:#05264b;font-size:22px;box-shadow:0 6px 20px rgba(125,211,252,.08)}
+  h1{margin:0;font-size:20px}
+  p.lead{margin:6px 0 14px;color:rgba(230,238,248,.78)}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.03);
+  }
+
+  /* message area */
+  .messageBox{min-height:180px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;justify-content:center;padding:18px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
+  .messageText{font-size:20px;line-height:1.35;white-space:pre-wrap;opacity:0.98;min-height:86px}
+  .meta{display:flex;gap:10px;align-items:center;width:100%;justify-content:space-between}
+  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:10px;color:inherit;cursor:pointer;font-weight:600}
+  .btn:active{transform:translateY(1px)}
+  .controls{display:flex;gap:8px;align-items:center}
+  .small{font-size:13px;color:rgba(230,238,248,.7)}
+
+  /* right column */
+  aside .card{position:sticky;top:28px}
+  .options{display:flex;flex-direction:column;gap:8px}
+  label{font-size:13px;color:rgba(230,238,248,.8)}
+  select,input[type="text"]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;outline:none}
+  .checkboxRow{display:flex;gap:8px;align-items:center}
+  .tag{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.04);font-size:13px}
+  footer{margin-top:14px;color:rgba(230,238,248,.6);font-size:13px;display:flex;justify-content:space-between;align-items:center}
+
+  /* big surprise glow */
+  .glow{position:absolute;right:-120px;top:-160px;width:420px;height:420px;background:radial-gradient(circle at 35% 20%, rgba(125,211,252,.08), transparent 20%), radial-gradient(circle at 65% 80%, rgba(99,102,241,.06), transparent 20%);filter: blur(30px);transform:rotate(10deg);pointer-events:none}
+  .confetti-canvas{position:absolute;left:0;top:0;pointer-events:none;width:100%;height:100%}
+
+  /* modal */
+  .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.6);opacity:0;pointer-events:none;transition:all .18s ease}
+  .modal.show{opacity:1;pointer-events:auto}
+  .modalCard{background:var(--card);padding:18px;border-radius:12px;min-width:320px;border:1px solid rgba(255,255,255,0.03)}
+  .closeX{background:transparent;border:0;color:rgba(230,238,248,.7);font-weight:700;padding:4px 8px;border-radius:8px}
+
+  /* typewriter cursor */
+  .cursor{display:inline-block;width:8px;height:18px;background:linear-gradient(180deg,#e6f8ff,#a6efff);margin-left:6px;border-radius:3px;opacity:0;animation:blink 1s steps(2) infinite}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr; } aside .card{position:relative;top:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="glow"></div>
+  <canvas class="confetti-canvas" id="confetti"></canvas>
+
+  <header>
+    <div class="logo">U</div>
+    <div>
+      <h1>Friendship Gift Generator</h1>
+      <p class="lead">A tiny surprise that types out a new memory, compliment, or promise — made by you.</p>
+    </div>
+  </header>
+
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <div class="messageBox" id="messageBox">
+        <div class="messageText" id="messageText"></div>
+        <div class="meta" style="width:100%">
+          <div class="small">Category: <span id="catLabel" class="tag">—</span></div>
+          <div class="controls">
+            <button class="btn" id="surpriseBtn">Surprise Me ✨</button>
+            <button class="btn" id="slowBtn">Slow Type</button>
+            <button class="btn" id="downloadBtn">Download Cert</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:14px;align-items:center">
+        <input id="recipientName" placeholder="Friend's name (optional)" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+        <button class="btn" id="surpriseQuick">Quick</button>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <div class="small">Tip: Press Surprise Me repeatedly to build a sequence of messages.</div>
+      </div>
+
+      <footer>
+        <div class="small">Built with code — make it yours ✨</div>
+        <div class="small">Secret: type the passphrase below</div>
+      </footer>
+    </div>
+
+    <aside>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <div class="small">Generator Options</div>
+            <strong>Customize</strong>
+          </div>
+          <div style="text-align:right">
+            <div class="small">v1.0</div>
+          </div>
+        </div>
+
+        <div class="options">
+          <label>Category</label>
+          <select id="categorySelect">
+            <option value="mixed">Mixed</option>
+            <option value="compliment">Compliment</option>
+            <option value="memory">Memory</option>
+            <option value="promise">Promise</option>
+            <option value="poem">Tiny Poem</option>
+          </select>
+
+          <label>Intensity</label>
+          <select id="intensity">
+            <option value="gentle">Gentle</option>
+            <option value="warm">Warm</option>
+            <option value="bold">Bold</option>
+          </select>
+
+          <div class="checkboxRow">
+            <input id="enableConfetti" type="checkbox" checked />
+            <label for="enableConfetti">Enable confetti</label>
+          </div>
+
+          <label>Secret passphrase</label>
+          <input id="secretInput" type="text" placeholder="Type here & press Enter to unlock">
+
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button class="btn" id="editData">Edit local arrays</button>
+            <button class="btn" id="resetBtn">Reset</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="small">Want to personalize further? Edit the JS arrays inside this file (lines at top of script).</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- modal for secret -->
+<div class="modal" id="secretModal" role="dialog" aria-hidden="true">
+  <div class="modalCard">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <strong>Secret unlocked</strong>
+        <div class="small">A private hidden memory</div>
+      </div>
+      <button class="closeX" id="closeModal">✕</button>
+    </div>
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:12px 0">
+    <div id="secretArea" style="min-height:80px;font-size:15px"></div>
+  </div>
+</div>
+
+<script>
+/* -------------------- CUSTOMIZABLE ARRAYS --------------------
+Edit these arrays to add your own compliments, memories, promises or poems.
+-----------------------------------------------------------------*/
+const DATA = {
+  compliments: [
+    "You light up the room without even trying.",
+    "Your laugh is my favorite sound.",
+    "You make ordinary days feel special.",
+    "You have an uncanny way of knowing when someone needs a smile.",
+    "Kind, brilliant, and never boring — that's you."
+  ],
+  memories: [
+    "That rainy day we shared an umbrella and ended up dancing on the street.",
+    "The night we stayed up till dawn fixing each other's playlists and life plans.",
+    "When you taught me to make that spicy chai — I still taste it and think of you.",
+    "Remember that silly road trip with no maps? We got lost and found a hidden waterfall.",
+    "The first time we laughed so hard we couldn't breathe — I carry that with me."
+  ],
+  promises: [
+    "I promise to be there — even when Wi-Fi fails and life gets slow.",
+    "I'll always champion your wild ideas and your quiet ones too.",
+    "I'll send you a good-meme every Monday for as long as we live.",
+    "When you need a midnight call, I'll pick up (unless I'm asleep — then I'll call first thing).",
+    "I'll keep your secrets like rare collectibles."
+  ],
+  poems: [
+    "You are a small galaxy; I am happy to orbit you.",
+    "Soft mornings, loud laughter — threads of you in every day.",
+    "We keep collecting tiny suns and calling them memories.",
+    "If friendship were a garden, you'd be the brightest bloom.",
+    "Words fold into stars when I try to describe you."
+  ],
+  secretMessages: [
+    "The very first song we both loved is still my comfort song — I saved it for you.",
+    "You were the brave friend who stayed when everyone else left. That matters.",
+    "If I had a time machine I'd bring you coffee and tell you you're incredible."
+  ],
+  passphrase: "forever-our-way" // change this to your own private passphrase
+};
+
+/* -------------------- small utilities -------------------- */
+function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+/* typewriter function */
+async function typeWrite(element, text, speed=28){
+  element.textContent = "";
+  const cursor = document.createElement('span'); cursor.className='cursor';
+  element.appendChild(cursor);
+  // insert characters before cursor:
+  for(let i=0;i<text.length;i++){
+    cursor.insertAdjacentText('beforebegin', text[i]);
+    await new Promise(r=>setTimeout(r, speed));
+  }
+  cursor.remove();
+}
+
+/* gentle beep using WebAudio */
+function playTone(duration=220, freq=420){
+  try{
+    const C = new (window.AudioContext || window.webkitAudioContext)();
+    const o = C.createOscillator();
+    const g = C.createGain();
+    o.type = "sine"; o.frequency.value = freq;
+    g.gain.value = 0.0045;
+    o.connect(g); g.connect(C.destination);
+    o.start();
+    setTimeout(()=>{ o.stop(); C.close(); }, duration);
+  }catch(e){ /* ignore if not allowed */ }
+}
+
+/* Confetti (simple) */
+function burstConfetti(canvas){
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W = canvas.width = canvas.offsetWidth, H = canvas.height = canvas.offsetHeight;
+  let pieces = [];
+  for(let i=0;i<90;i++){
+    pieces.push({
+      x: Math.random()*W, y: -10 - Math.random()*200,
+      vx: (Math.random()-0.5)*4, vy: 1+Math.random()*4,
+      size: 6+Math.random()*8, rot: Math.random()*360, velR: (Math.random()-0.5)*6,
+      col: ["#f97316","#fb7185","#34d399","#60a5fa","#facc15"][Math.floor(Math.random()*5)]
+    });
+  }
+  let t=0;
+  function frame(){
+    t++; ctx.clearRect(0,0,W,H);
+    for(let p of pieces){
+      p.x += p.vx; p.y += p.vy; p.rot += p.velR;
+      ctx.save();
+      ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle = p.col;
+      ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+      ctx.restore();
+    }
+    pieces = pieces.filter(p=>p.y < H + 20);
+    if(pieces.length>0 && t<180) requestAnimationFrame(frame);
+    else ctx.clearRect(0,0,W,H);
+  }
+  frame();
+}
+
+/* certificate download (render message to canvas and download PNG) */
+function downloadCertificate(message, recipient){
+  const pad = 40, w = 1200, h = 700;
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx = c.getContext('2d');
+  // background
+  const g = ctx.createLinearGradient(0,0,w,h);
+  g.addColorStop(0,"#00111a"); g.addColorStop(1,"#071428");
+  ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  // header
+  ctx.fillStyle = "#e6f8ff"; ctx.font = "bold 36px Georgia";
+  ctx.fillText("Friendship Certificate", pad, 90);
+  ctx.font = "16px Georgia"; ctx.fillStyle = "rgba(230,238,248,.8)";
+  const sub = "A small token of a big friendship — generated with care.";
+  ctx.fillText(sub, pad, 120);
+  // recipient
+  ctx.fillStyle = "#dbeefe"; ctx.font = "bold 28px Georgia";
+  ctx.fillText(recipient ? `For ${recipient}` : "For You", pad, 180);
+  // message body wrapped
+  ctx.font = "20px Georgia"; ctx.fillStyle = "#f1fbff";
+  const words = message.split(" ");
+  const lineLen = 42;
+  let y = 230, line = "";
+  for(let i=0;i<words.length;i++){
+    line += words[i] + " ";
+    if(line.length > lineLen || i === words.length-1){
+      ctx.fillText(line.trim(), pad, y);
+      y += 34; line = "";
+    }
+  }
+  // footer
+  ctx.font = "16px Georgia"; ctx.fillStyle = "rgba(230,238,248,.6)";
+  ctx.fillText("Made with code and a lot of heart.", pad, h - 60);
+  // make image, trigger download
+  const url = c.toDataURL('image/png');
+  const a = document.createElement('a'); a.href=url; a.download = `friendship-for-${(recipient||'friend').replace(/\s+/g,'_')}.png`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* -------------------- glue UI -------------------- */
+const messageText = document.getElementById('messageText');
+const surpriseBtn = document.getElementById('surpriseBtn');
+const surpriseQuick = document.getElementById('surpriseQuick');
+const slowBtn = document.getElementById('slowBtn');
+const categorySelect = document.getElementById('categorySelect');
+const catLabel = document.getElementById('catLabel');
+const enableConfetti = document.getElementById('enableConfetti');
+const confettiCanvas = document.getElementById('confetti');
+const secretInput = document.getElementById('secretInput');
+const secretModal = document.getElementById('secretModal');
+const secretArea = document.getElementById('secretArea');
+const closeModal = document.getElementById('closeModal');
+const recipientName = document.getElementById('recipientName');
+const downloadBtn = document.getElementById('downloadBtn');
+const slowState = {on:false};
+
+function makeMessage(selectedCategory, intensity){
+  // pick category
+  let cat = selectedCategory;
+  if(cat === 'mixed') {
+    const opts = ['compliment','memory','promise','poem'];
+    cat = opts[Math.floor(Math.random()*opts.length)];
+  }
+  let arr = DATA[ cat + 's' ] || DATA.compliments;
+  // intensity tweak: for bold, append extra strong phrase
+  let base = pickRandom(arr);
+  if(intensity === 'bold'){
+    const extra = ["I mean it.", "No exaggeration.", "Truly.", "Without question."];
+    base = base + " — " + pickRandom(extra);
+  } else if(intensity === 'warm'){
+    base = base + " " + (Math.random()<0.5 ? "It matters to me." : "I want you to know that.");
+  }
+  return {cat, text: base};
+}
+
+async function handleSurprise(speed=28){
+  const sel = categorySelect.value;
+  const intensity = document.getElementById('intensity').value;
+  catLabel.textContent = sel === 'mixed' ? "Mixed" : sel[0].toUpperCase()+sel.slice(1);
+  const rec = recipientName.value.trim();
+  const m = makeMessage(sel, intensity);
+  const message = rec ? `${rec},\n\n${m.text}` : m.text;
+  playTone(240, 430 + Math.random()*80);
+  await typeWrite(messageText, message, speed);
+  if(enableConfetti.checked) burstConfetti(confettiCanvas);
+}
+
+/* events */
+surpriseBtn.addEventListener('click', ()=> handleSurprise(22));
+surpriseQuick.addEventListener('click', ()=> handleSurprise(6));
+slowBtn.addEventListener('click', ()=> {
+  slowState.on = !slowState.on;
+  slowBtn.textContent = slowState.on ? 'Fast Type' : 'Slow Type';
+  // adjust slightly - next press will honor
+});
+downloadBtn.addEventListener('click', ()=>{
+  const msg = messageText.textContent || "You are special.";
+  downloadCertificate(msg, recipientName.value.trim());
+});
+
+/* secret passphrase unlock */
+secretInput.addEventListener('keyup', (e)=>{
+  if(e.key === 'Enter'){
+    const val = secretInput.value.trim();
+    if(!val) return;
+    if(val === DATA.passphrase){
+      // show secret message
+      const s = pickRandom(DATA.secretMessages);
+      secretArea.textContent = s;
+      secretModal.classList.add('show');
+      playTone(320, 540);
+      burstConfetti(confettiCanvas);
+    } else {
+      secretInput.value = "";
+      // small shake
+      secretInput.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(0)'}],{duration:280});
+      playTone(120, 220);
+    }
+  }
+});
+closeModal.addEventListener('click', ()=> secretModal.classList.remove('show'));
+
+/* reset */
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  recipientName.value = ""; categorySelect.value = 'mixed'; document.getElementById('intensity').value='gentle';
+  messageText.textContent = ""; catLabel.textContent = "—";
+});
+
+/* quick small editor alert (for novices) */
+document.getElementById('editData').addEventListener('click', ()=>{
+  alert("To personalize thoroughly: open this file in a text editor and change the arrays near the top (compliments, memories, promises, poems, secretMessages and passphrase). Save and re-open the file.");
+});
+
+/* size confetti canvas on resize */
+function sizeConfetti(){
+  confettiCanvas.width = confettiCanvas.offsetWidth;
+  confettiCanvas.height = confettiCanvas.offsetHeight;
+}
+window.addEventListener('resize', sizeConfetti);
+sizeConfetti();
+
+/* initial welcoming typed message */
+(async()=>{
+  await new Promise(r=>setTimeout(r,420));
+  await typeWrite(messageText, "Press 'Surprise Me' — I'll find something special to say.", 20);
+  catLabel.textContent = "Mixed";
+})();
+
+/* keyboard shortcut: press 's' for surprise */
+window.addEventListener('keydown', (e)=>{
+  if(e.key.toLowerCase()==='s' && document.activeElement.tagName!=='INPUT') {
+    handleSurprise(14);
+  }
+});
+</script>
+</body>
+</html>
